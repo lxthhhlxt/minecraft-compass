@@ -27,7 +27,7 @@ GGA::GGA(const std::string& str)
 
 bool GGA::parse(const std::string& sentence)
 {
-    if (sentence.substr(0, 6) != "$GPGGA")
+    if (sentence.substr(0, 6) != "$GNGGA")
     {
         ESP_LOGE(TAG, "Sentence type not GGA.");
         return false;
@@ -168,17 +168,17 @@ void GTU8::parse_complete_sentences(std::string& buffer)
         }
         if (!sentence.empty() && sentence[0] == '$')
         {
-            printf("Sentence: %s\n\n", sentence.c_str());
+            // ESP_LOGI(TAG, "Sentence: %s\n\n", sentence.substr(0, 6).c_str());
 
-            if (sentence.substr(0, 6) == "$GPGGA")
+            if (sentence.substr(0, 6) == "$GNGGA")
             {
-                printf("Sentence: %s\n\n", sentence.c_str());
+                ESP_LOGI(TAG, "Sentence: %s\n\n", sentence.c_str());
 
                 auto gga_sentence = GGA(sentence);
-                printf("GGA latitude: %s%s longitude: %s%s gps_status: %d satellite_count: %d\n",
-                        gga_sentence.latitude_.c_str(), gga_sentence.lat_direction_.c_str(),
-                        gga_sentence.longitude_.c_str(), gga_sentence.lon_direction_.c_str(),
-                        gga_sentence.gps_status_, gga_sentence.satellite_count_);
+                ESP_LOGI(TAG, "GGA latitude: %s%s longitude: %s%s gps_status: %d satellite_count: %d\n",
+                                gga_sentence.latitude_.c_str(), gga_sentence.lat_direction_.c_str(),
+                                gga_sentence.longitude_.c_str(), gga_sentence.lon_direction_.c_str(),
+                                gga_sentence.gps_status_, gga_sentence.satellite_count_);
             }
         }
 
