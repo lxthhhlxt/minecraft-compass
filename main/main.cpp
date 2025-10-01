@@ -1,4 +1,6 @@
+#include <cstddef>
 #include <stdio.h>
+#include "compressed_led.hpp"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -12,15 +14,6 @@
 #include "GTU8.hpp"
 
 static const char *TAG = "MineCraft-Compass";
-
-// 定义I2C配置
-constexpr gpio_num_t i2c_master_scl_io  = GPIO_NUM_4;
-constexpr gpio_num_t i2c_master_sda_io  = GPIO_NUM_5;
-constexpr uint32_t   i2c_master_freq_hz = 400000;
-constexpr i2c_port_t mpu6050_i2c_num    = I2C_NUM_0;
-constexpr uint8_t    mpu6050_addr       = 0x68;
-constexpr i2c_port_t qmc5883p_i2c_num   = I2C_NUM_0;
-constexpr uint8_t    qmc5883p_addr      = 0x2C;
 
 // 定义UART配置
 constexpr uart_port_t uart_port_num       = UART_NUM_1;  // 使用的UART端口号
@@ -40,47 +33,6 @@ void nvs_init()
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-}
-
-// 初始化I2C主机
-static void i2c_master_init() {
-    i2c_config_t conf;
-    conf.mode = I2C_MODE_MASTER;
-    conf.sda_io_num = i2c_master_sda_io;
-    conf.scl_io_num = i2c_master_scl_io;
-    conf.sda_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.scl_pullup_en = GPIO_PULLUP_ENABLE;
-    conf.master.clk_speed = i2c_master_freq_hz;
-    conf.clk_flags = 0;
-
-    esp_err_t err = i2c_param_config(mpu6050_i2c_num, &conf);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "I2C参数配置失败: %d", err);
-        return;
-    }
-
-    err = i2c_driver_install(mpu6050_i2c_num, conf.mode, 0, 0, 0);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "I2C驱动安装失败: %d", err);
-    }
-}
-
-// I2C扫描函数
-void i2c_scanner() {
-    ESP_LOGI(TAG, "Scanning I2C bus...\n");
-    for (uint8_t addr = 1; addr < 127; addr++) {
-        i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-        i2c_master_start(cmd);
-        i2c_master_write_byte(cmd, (addr << 1) | I2C_MASTER_WRITE, true);
-        i2c_master_stop(cmd);
-        esp_err_t ret = i2c_master_cmd_begin(mpu6050_i2c_num, cmd, pdMS_TO_TICKS(100));
-        i2c_cmd_link_delete(cmd);
-
-        if (ret == ESP_OK) {
-            ESP_LOGI(TAG, "Device found at address 0x%02X\n", addr);
-        }
-    }
-    ESP_LOGI(TAG, "Scan completed.\n");
 }
 
 void setup_uart() {
@@ -104,24 +56,51 @@ void setup_uart() {
 
 extern "C" void app_main()
 {
-    nvs_init();
-
-    i2c_master_init();
-
-    i2c_scanner();
-
-    setup_uart();
-
-    imu_sensor::IMU9DoF imu(mpu6050_i2c_num, mpu6050_addr,
-                            qmc5883p_i2c_num, qmc5883p_addr);
-    imu.init();
-
-    auto gps = std::make_shared<gps_sensor::GTU8>(uart_port_num);
-
-    xTaskCreate(
-        [](void *Param) {
-            auto gps_ptr = static_cast<std::shared_ptr<gps_sensor::GTU8> *>(Param);
-            auto gps = *gps_ptr;
-            gps->update();
-        }, "gps_task", 4096, &gps, 5, NULL);
+    xTaskCreate(imu_sensor::imuTask,     "imu_task", 4096, NULL, 3, NULL);
+    xTaskCreate(gps_sensor::gpsTask,     "gps_task", 4096, NULL, 2, NULL);
+    xTaskCreate(compressed_led::ledTask, "led_task", 4096, NULL, 1, NULL);
 }
+
+// extern "C" void app_main()
+// {
+//     nvs_init();
+
+//     i2c_master_init();
+
+//     i2c_scanner();
+
+//     setup_uart();
+
+//     imu_sensor::IMU9DoF imu(mpu6050_i2c_num, mpu6050_addr,
+//                             qmc5883p_i2c_num, qmc5883p_addr);
+//     imu.init();
+
+//     auto gps = std::make_shared<gps_sensor::GTU8>(uart_port_num);
+
+
+//     xTaskCreate(
+//         [](void *Param) {
+//             auto gps_ptr = static_cast<std::shared_ptr<gps_sensor::GTU8> *>(Param);
+//             auto gps = *gps_ptr;
+//             gps->update();
+//         }, "gps_task", 4096, &gps, 5, NULL);
+
+//     while (1)
+//     {
+//         static angle = 0.0f;
+//         auto gps_status = gps_sensor::GPSStatus::NOT_POSITIONED;
+//         {
+//             std::lock_guard<std::mutex> lock(gps->data_mutex_);
+//             if (gps->data_)
+//             {
+//                 gps_status = gps->data_->gps_status_;
+//             }
+//         }
+
+//         if (gps_status == gps_sensor::GPSStatus::NOT_POSITIONED || gps_status == gps_sensor::GPSStatus::UNKNOWN)
+//         {
+//             angle += 5.0f;
+//         }
+//
+//     }
+// }

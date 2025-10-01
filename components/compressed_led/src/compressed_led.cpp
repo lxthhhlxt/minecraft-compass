@@ -1,5 +1,10 @@
 #include "compressed_led.hpp"
 
+// 硬件配置
+constexpr gpio_num_t LED_STRIP_GPIO_NUM = GPIO_NUM_6;   // 连接WS2812 DIN的GPIO引脚
+constexpr uint8_t LED_STRIP_LED_NUMBER = 56;            // 灯带上WS2812灯珠的数量
+constexpr uint32_t LED_STRIP_RMT_RES_HZ = (10 * 1000 * 1000); // RMT分辨率：10MHz, 1 tick = 0.1us
+
 // deep gary R G B paras
 constexpr uint32_t DEEP_GRAY_R = 180;
 constexpr uint32_t DEEP_GRAY_G = 220;
@@ -11,10 +16,12 @@ constexpr uint32_t LIGHT_GRAY_G = 220;
 constexpr uint32_t LIGHT_GRAY_B = 255;
 
 // red R G B paras
-constexpr uint32_t RED_R = 0;
+constexpr uint32_t RED_R = 255;
 constexpr uint32_t RED_G = 0;
 constexpr uint32_t RED_B = 0;
 
+namespace compressed_led
+{
 CompressedLed::CompressedLed(led_strip_handle_t led_strip)
 : led_strip_(led_strip)
 {};
@@ -245,4 +252,10 @@ void CompressedLed::set_compressed_led(const std::vector<uint8_t>& red_led_nums,
     set_leds_rgb(red_led_nums, RED_R, RED_G, RED_B);
     set_leds_rgb(deep_gray_led_nums, DEEP_GRAY_R, DEEP_GRAY_G, DEEP_GRAY_B);
     set_leds_rgb(light_gray_led_nums, LIGHT_GRAY_R, LIGHT_GRAY_G, LIGHT_GRAY_B);
+}
+
+void ledTask(void *Params)
+{
+
+}
 }

@@ -1,3 +1,3 @@
 idf_component_register(SRC_DIRS "src"
                        INCLUDE_DIRS "include"
-                       REQUIRES driver nvs_flash)
+                       REQUIRES driver nvs_flash esp_timer)

@@ -5,6 +5,21 @@
 
 namespace imu_sensor
 {
+struct Data
+{
+    float accel_x{0.0f};
+    float accel_y{0.0f};
+    float accel_z{0.0f};
+
+    float gyro_x{0.0f};
+    float gyro_y{0.0f};
+    float gyro_z{0.0f};
+
+    float mag_x{0.0f};
+    float mag_y{0.0f};
+    float mag_z{0.0f};
+};
+
 class IMU9DoF
 {
 public:
@@ -15,8 +30,13 @@ public:
 
     esp_err_t init();
 
+    void calc9AsixData();
+
 private:
     std::shared_ptr<MPU6050::MPU6050> mpu6050_{nullptr};
     std::shared_ptr<QMC5883P::QMC5883P> qmc5883p_{nullptr};
+
 };
+
+void imuTask(void *Params);
 }

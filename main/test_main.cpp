@@ -150,64 +150,64 @@ static led_strip_handle_t configure_led_strip(void)
     return led_strip;
 }
 
-qmc5883p_cal_data_t compensate_tilt_and_declination(qmc5883p_cal_data_t mag_data, MPU6050Data mpu_data, float declination_rad)
-{
-    qmc5883p_cal_data_t result;
+// qmc5883p_cal_data_t compensate_tilt_and_declination(qmc5883p_cal_data_t mag_data, MPU6050Data mpu_data, float declination_rad)
+// {
+//     qmc5883p_cal_data_t result;
 
-    // 1. 归一化加速度计数据
-    float norm = sqrtf(mpu_data.accel_x * mpu_data.accel_x +
-                       mpu_data.accel_y * mpu_data.accel_y +
-                       mpu_data.accel_z * mpu_data.accel_z);
+//     // 1. 归一化加速度计数据
+//     float norm = sqrtf(mpu_data.accel_x * mpu_data.accel_x +
+//                        mpu_data.accel_y * mpu_data.accel_y +
+//                        mpu_data.accel_z * mpu_data.accel_z);
 
-    if (norm < 0.001f) {
-        // 避免除以零，返回未处理的磁力计数据
-        return mag_data;
-    }
+//     if (norm < 0.001f) {
+//         // 避免除以零，返回未处理的磁力计数据
+//         return mag_data;
+//     }
 
-    float ax_norm = mpu_data.accel_x / norm;
-    float ay_norm = mpu_data.accel_y / norm;
-    float az_norm = mpu_data.accel_z / norm;
+//     float ax_norm = mpu_data.accel_x / norm;
+//     float ay_norm = mpu_data.accel_y / norm;
+//     float az_norm = mpu_data.accel_z / norm;
 
-    // 2. 使用加速度计数据计算俯仰角(pitch)和横滚角(roll)
-    // 横滚角 (绕X轴旋转)
-    float roll = atan2f(ay_norm, az_norm);
+//     // 2. 使用加速度计数据计算俯仰角(pitch)和横滚角(roll)
+//     // 横滚角 (绕X轴旋转)
+//     float roll = atan2f(ay_norm, az_norm);
 
-    // 俯仰角 (绕Y轴旋转)
-    float pitch = atan2f(-ax_norm, sqrtf(ay_norm * ay_norm + az_norm * az_norm));
+//     // 俯仰角 (绕Y轴旋转)
+//     float pitch = atan2f(-ax_norm, sqrtf(ay_norm * ay_norm + az_norm * az_norm));
 
-    // 3. 计算旋转矩阵的元素（从机体坐标系到地平坐标系）
-    float sin_roll = sinf(roll);
-    float cos_roll = cosf(roll);
-    float sin_pitch = sinf(pitch);
-    float cos_pitch = cosf(pitch);
+//     // 3. 计算旋转矩阵的元素（从机体坐标系到地平坐标系）
+//     float sin_roll = sinf(roll);
+//     float cos_roll = cosf(roll);
+//     float sin_pitch = sinf(pitch);
+//     float cos_pitch = cosf(pitch);
 
-    // 4. 对磁力计数据进行倾斜补偿（从机体坐标系转换到地平坐标系）
-    // 水平分量X (北方向)
-    float hx = mag_data.x * cos_pitch +
-               mag_data.y * sin_roll * sin_pitch +
-               mag_data.z * cos_roll * sin_pitch;
+//     // 4. 对磁力计数据进行倾斜补偿（从机体坐标系转换到地平坐标系）
+//     // 水平分量X (北方向)
+//     float hx = mag_data.x * cos_pitch +
+//                mag_data.y * sin_roll * sin_pitch +
+//                mag_data.z * cos_roll * sin_pitch;
 
-    // 水平分量Y (东方向)
-    float hy = mag_data.y * cos_roll -
-               mag_data.z * sin_roll;
+//     // 水平分量Y (东方向)
+//     float hy = mag_data.y * cos_roll -
+//                mag_data.z * sin_roll;
 
-    // 垂直分量Z (地方向)
-    float hz = -mag_data.x * sin_pitch +
-               mag_data.y * sin_roll * cos_pitch +
-               mag_data.z * cos_roll * cos_pitch;
+//     // 垂直分量Z (地方向)
+//     float hz = -mag_data.x * sin_pitch +
+//                mag_data.y * sin_roll * cos_pitch +
+//                mag_data.z * cos_roll * cos_pitch;
 
-    // 5. 对水平磁场分量进行磁偏角校正（从磁北到真北）
-    float north = hx * cosf(declination_rad) - hy * sinf(declination_rad);
-    float east = hx * sinf(declination_rad) + hy * cosf(declination_rad);
-    float down = hz; // 垂直分量不变
+//     // 5. 对水平磁场分量进行磁偏角校正（从磁北到真北）
+//     float north = hx * cosf(declination_rad) - hy * sinf(declination_rad);
+//     float east = hx * sinf(declination_rad) + hy * cosf(declination_rad);
+//     float down = hz; // 垂直分量不变
 
-    // 6. 返回结果
-    result.x = north;
-    result.y = east;
-    result.z = down;
+//     // 6. 返回结果
+//     result.x = north;
+//     result.y = east;
+//     result.z = down;
 
-    return result;
-}
+//     return result;
+// }
 
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
@@ -274,11 +274,11 @@ constexpr i2c_port_t mpu6050_i2c_num = I2C_NUM_0;
 constexpr uint8_t mpu6050_addr = 0x68;
 constexpr i2c_port_t qmc5883p_i2c_num = I2C_NUM_0;
 
-extern "C" void app_main()
-{
-    imu_sensor::IMU9DoF imu(mpu6050_i2c_num, mpu6050_addr, qmc5883p_i2c_num);
-    imu.init();
-}
+// extern "C" void app_main()
+// {
+//     imu_sensor::IMU9DoF imu(mpu6050_i2c_num, mpu6050_addr, qmc5883p_i2c_num);
+//     imu.init();
+// }
 
 // extern "C" void app_main(void)
 // {
@@ -287,171 +287,171 @@ extern "C" void app_main()
 //     read_and_print_uart_data(); // 此函数包含无限循环，不会返回
 // }
 
-// extern "C" void app_main()
-// {
-//     // 配置并初始化LED Strip
-//     led_strip = configure_led_strip();
+extern "C" void app_main()
+{
+    // 配置并初始化LED Strip
+    led_strip = configure_led_strip();
 
-//     // 清除LED Strip（所有LED熄灭）
-//     ESP_ERROR_CHECK(led_strip_clear(led_strip));
+    // 清除LED Strip（所有LED熄灭）
+    ESP_ERROR_CHECK(led_strip_clear(led_strip));
 
-//     vTaskDelay(1000 / portTICK_PERIOD_MS); // 等待1秒
+    vTaskDelay(1000 / portTICK_PERIOD_MS); // 等待1秒
 
-//     // 初始化I2C
-//     i2c_master_init();
-//     ESP_LOGI(TAG, "I2C初始化完成");
+    // 初始化I2C
+    i2c_master_init();
+    ESP_LOGI(TAG, "I2C初始化完成");
 
-//     i2c_scanner();
+    i2c_scanner();
 
-//     // 创建MPU6050对象并初始化
-//     MPU6050 mpu6050(I2C_MASTER_NUM, MPU6050_ADDR);
+    // 创建MPU6050对象并初始化
+    MPU6050 mpu6050(I2C_MASTER_NUM, MPU6050_ADDR);
 
-//     if (esp_err_t ret = mpu6050.init(); ret != ESP_OK)
-//     {
-//         ESP_LOGE(TAG, "MPU6050初始化失败: err: 0x%x", ret);
-//         return;
-//     }
-//     ESP_LOGI(TAG, "MPU6050初始化成功");
+    if (esp_err_t ret = mpu6050.init(); ret != ESP_OK)
+    {
+        ESP_LOGE(TAG, "MPU6050初始化失败: err: 0x%x", ret);
+        return;
+    }
+    ESP_LOGI(TAG, "MPU6050初始化成功");
 
-//     // 配置MPU6050使用辅助I2C
-//     if (esp_err_t mpu6050.enable_aux_i2c(); ret != ESP_OK) {
-//         ESP_LOGE(TAG, "启用MPU6050辅助I2C失败: err: 0x%x", ret);
-//         return;
-//     }
-//     ESP_LOGI(TAG, "MPU6050辅助I2C已启用");
+    // 配置MPU6050使用辅助I2C
+    if (esp_err_t mpu6050.enable_aux_i2c(); ret != ESP_OK) {
+        ESP_LOGE(TAG, "启用MPU6050辅助I2C失败: err: 0x%x", ret);
+        return;
+    }
+    ESP_LOGI(TAG, "MPU6050辅助I2C已启用");
 
-//     // 创建QMC5883P对象并初始化
-//     QMC5883P qmc5883p(I2C_MASTER_NUM);
-//     ret = qmc5883p.init();
-//     if (ret != ESP_OK) {
-//         ESP_LOGE(TAG, "QMC5883P初始化失败: %d", ret);
-//         return;
-//     }
-//     ESP_LOGI(TAG, "QMC5883P初始化成功");
+    // 创建QMC5883P对象并初始化
+    QMC5883P qmc5883p(I2C_MASTER_NUM);
+    ret = qmc5883p.init();
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "QMC5883P初始化失败: %d", ret);
+        return;
+    }
+    ESP_LOGI(TAG, "QMC5883P初始化成功");
 
-//     // mpu6050.calibrate_accel_gyro();
+    // mpu6050.calibrate_accel_gyro();
 
-//     // qmc5883p.calibrateMagnetometer();
+    // qmc5883p.calibrateMagnetometer();
 
-//     // 主循环读取传感器数据
-//     while (true) {
-//         int32_t start_time = esp_timer_get_time() / 1000;
+    // 主循环读取传感器数据
+    while (true) {
+        int32_t start_time = esp_timer_get_time() / 1000;
 
-//         // 读取MPU6050数据
-//         mpu6050_data_t mpu_data, device_asix_mpu_data;
-//         ret = mpu6050.get_cal_motion(&mpu_data);
-//         if (ret == ESP_OK) {
-//             device_asix_mpu_data.accel_x = mpu_data.accel_x;
-//             device_asix_mpu_data.accel_y = -mpu_data.accel_y;
-//             device_asix_mpu_data.accel_z = -mpu_data.accel_z;
-//             device_asix_mpu_data.gyro_x = mpu_data.gyro_x;
-//             device_asix_mpu_data.gyro_y = -mpu_data.gyro_y;
-//             device_asix_mpu_data.gyro_z = -mpu_data.gyro_z;
-//             // ESP_LOGI(TAG, "加速度: X=%.2f, Y=%.2f, Z=%.2f",
-//             //         device_asix_mpu_data.accel_x, device_asix_mpu_data.accel_y, device_asix_mpu_data.accel_z);
-//             // ESP_LOGI(TAG, "陀螺仪: X=%.2f, Y=%.2f, Z=%.2f",
-//             //         device_asix_mpu_data.gyro_x, device_asix_mpu_data.gyro_y, device_asix_mpu_data.gyro_z);
-//             // ESP_LOGI(TAG, "温度: %.2f °C", mpu_data.temp);
-//         } else {
-//             ESP_LOGE(TAG, "读取MPU6050数据失败: %d", ret);
-//         }
+        // 读取MPU6050数据
+        mpu6050_data_t mpu_data, device_asix_mpu_data;
+        ret = mpu6050.get_cal_motion(&mpu_data);
+        if (ret == ESP_OK) {
+            device_asix_mpu_data.accel_x = mpu_data.accel_x;
+            device_asix_mpu_data.accel_y = -mpu_data.accel_y;
+            device_asix_mpu_data.accel_z = -mpu_data.accel_z;
+            device_asix_mpu_data.gyro_x = mpu_data.gyro_x;
+            device_asix_mpu_data.gyro_y = -mpu_data.gyro_y;
+            device_asix_mpu_data.gyro_z = -mpu_data.gyro_z;
+            // ESP_LOGI(TAG, "加速度: X=%.2f, Y=%.2f, Z=%.2f",
+            //         device_asix_mpu_data.accel_x, device_asix_mpu_data.accel_y, device_asix_mpu_data.accel_z);
+            // ESP_LOGI(TAG, "陀螺仪: X=%.2f, Y=%.2f, Z=%.2f",
+            //         device_asix_mpu_data.gyro_x, device_asix_mpu_data.gyro_y, device_asix_mpu_data.gyro_z);
+            // ESP_LOGI(TAG, "温度: %.2f °C", mpu_data.temp);
+        } else {
+            ESP_LOGE(TAG, "读取MPU6050数据失败: %d", ret);
+        }
 
-//         // 读取QMC5883P数据
-//         qmc5883p_cal_data_t mag_data, device_asix_mag_data;
-//         ret = qmc5883p.get_cal_data(&mag_data);
-//         if (ret == ESP_OK) {
-//             device_asix_mag_data.x = mag_data.y;
-//             device_asix_mag_data.y = mag_data.x;
-//             device_asix_mag_data.z = -mag_data.z;
-//             // ESP_LOGI(TAG, "磁力计: X=%.2f,\tY=%.2f,\tZ=%.2f",
-//             //         device_asix_mag_data.x, device_asix_mag_data.y, device_asix_mag_data.z);
-//         } else {
-//             ESP_LOGE(TAG, "读取QMC5883P数据失败: %d", ret);
-//         }
+        // 读取QMC5883P数据
+        qmc5883p_cal_data_t mag_data, device_asix_mag_data;
+        ret = qmc5883p.get_cal_data(&mag_data);
+        if (ret == ESP_OK) {
+            device_asix_mag_data.x = mag_data.y;
+            device_asix_mag_data.y = mag_data.x;
+            device_asix_mag_data.z = -mag_data.z;
+            // ESP_LOGI(TAG, "磁力计: X=%.2f,\tY=%.2f,\tZ=%.2f",
+            //         device_asix_mag_data.x, device_asix_mag_data.y, device_asix_mag_data.z);
+        } else {
+            ESP_LOGE(TAG, "读取QMC5883P数据失败: %d", ret);
+        }
 
-//         device_asix_mag_data = compensate_tilt_and_declination(device_asix_mag_data, device_asix_mpu_data, -0.057f);
-//         // ESP_LOGI(TAG, "磁力计: X=%.2f,\tY=%.2f,\tZ=%.2f",
-//         //         mag_data.x, mag_data.y, mag_data.z);
+        device_asix_mag_data = compensate_tilt_and_declination(device_asix_mag_data, device_asix_mpu_data, -0.057f);
+        // ESP_LOGI(TAG, "磁力计: X=%.2f,\tY=%.2f,\tZ=%.2f",
+        //         mag_data.x, mag_data.y, mag_data.z);
 
-//         // MahonyAHRSupdateIMU(degToRad(mpu_data.gyro_x), degToRad(mpu_data.gyro_y), degToRad(mpu_data.gyro_z),
-//         //                     mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z);
+        // MahonyAHRSupdateIMU(degToRad(mpu_data.gyro_x), degToRad(mpu_data.gyro_y), degToRad(mpu_data.gyro_z),
+        //                     mpu_data.accel_x, mpu_data.accel_y, mpu_data.accel_z);
 
-//         MahonyAHRSupdate(degToRad(device_asix_mpu_data.gyro_x), degToRad(device_asix_mpu_data.gyro_y), degToRad(device_asix_mpu_data.gyro_z),
-//                          device_asix_mpu_data.accel_x, device_asix_mpu_data.accel_y, device_asix_mpu_data.accel_z,
-//                          device_asix_mag_data.x, device_asix_mag_data.y, device_asix_mag_data.z);
+        MahonyAHRSupdate(degToRad(device_asix_mpu_data.gyro_x), degToRad(device_asix_mpu_data.gyro_y), degToRad(device_asix_mpu_data.gyro_z),
+                         device_asix_mpu_data.accel_x, device_asix_mpu_data.accel_y, device_asix_mpu_data.accel_z,
+                         device_asix_mag_data.x, device_asix_mag_data.y, device_asix_mag_data.z);
 
-//         Quaternion q;
-//         q.w = q0;
-//         q.x = q1;
-//         q.y = q2;
-//         q.z = q3;
+        Quaternion q;
+        q.w = q0;
+        q.x = q1;
+        q.y = q2;
+        q.z = q3;
 
-//         // 转换为欧拉角
-//         EulerAngles euler = quaternionToEuler(q);
+        // 转换为欧拉角
+        EulerAngles euler = quaternionToEuler(q);
 
-//         // ESP_LOGI(TAG, "欧拉角: Roll=%.2f°,\tPitch=%.2f°,\tYaw=%.2f°", radToDeg(euler.roll), radToDeg(euler.pitch), radToDeg(euler.yaw));
+        // ESP_LOGI(TAG, "欧拉角: Roll=%.2f°,\tPitch=%.2f°,\tYaw=%.2f°", radToDeg(euler.roll), radToDeg(euler.pitch), radToDeg(euler.yaw));
 
-//         // 示例1：设置第一个LED为红色
-//         ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 255, 0, 0)); // (句柄, LED索引, R, G, B)
-//         // 示例2：设置第二个LED为绿色
-//         ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 1, 0, 255, 0));
-//         // 示例3：设置第三个LED为蓝色
-//         ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 2, 0, 0, 255));
+        // 示例1：设置第一个LED为红色
+        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 0, 255, 0, 0)); // (句柄, LED索引, R, G, B)
+        // 示例2：设置第二个LED为绿色
+        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 1, 0, 255, 0));
+        // 示例3：设置第三个LED为蓝色
+        ESP_ERROR_CHECK(led_strip_set_pixel(led_strip, 2, 0, 0, 255));
 
-//         // 将数据刷新到灯带
-//         ESP_ERROR_CHECK(led_strip_refresh(led_strip));
+        // 将数据刷新到灯带
+        ESP_ERROR_CHECK(led_strip_refresh(led_strip));
 
-//         int32_t end_time = esp_timer_get_time() / 1000;
-//         int32_t sleep_time = 10 - std::max((end_time - start_time), int32_t(0));
-//         vTaskDelay(pdMS_TO_TICKS(sleep_time)); // 每1秒读取一次
-//     }
-// }
+        int32_t end_time = esp_timer_get_time() / 1000;
+        int32_t sleep_time = 10 - std::max((end_time - start_time), int32_t(0));
+        vTaskDelay(pdMS_TO_TICKS(sleep_time)); // 每1秒读取一次
+    }
+}
 
-// extern "C" void app_main(void)
-// {
-//     // 1. 配置LED Strip
-//     led_strip_config_t strip_config = {
-//         .strip_gpio_num = LED_STRIP_GPIO_NUM,
-//         .max_leds = LED_STRIP_LED_NUMBER,
-//         .led_pixel_format = LED_PIXEL_FORMAT_GRB, // 注意颜色格式！
-//         .led_model = LED_MODEL_WS2812,
-//         .flags = {
-//             .invert_out = false,
-//         },
-//     };
+extern "C" void app_main(void)
+{
+    // 1. 配置LED Strip
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = LED_STRIP_GPIO_NUM,
+        .max_leds = LED_STRIP_LED_NUMBER,
+        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // 注意颜色格式！
+        .led_model = LED_MODEL_WS2812,
+        .flags = {
+            .invert_out = false,
+        },
+    };
 
-//     led_strip_rmt_config_t rmt_config = {
-//         .clk_src = RMT_CLK_SRC_DEFAULT,
-//         .resolution_hz = LED_STRIP_RMT_RES_HZ,
-//         .mem_block_symbols = 0,
-//         .flags = {
-//             .with_dma = false,
-//         },
-//     };
+    led_strip_rmt_config_t rmt_config = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz = LED_STRIP_RMT_RES_HZ,
+        .mem_block_symbols = 0,
+        .flags = {
+            .with_dma = false,
+        },
+    };
 
-//     // 2. 初始化LED Strip，并检查错误
-//     esp_err_t err = led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip);
-//     if (err != ESP_OK) {
-//         // 打印错误信息
-//         return;
-//     }
+    // 2. 初始化LED Strip，并检查错误
+    esp_err_t err = led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip);
+    if (err != ESP_OK) {
+        // 打印错误信息
+        return;
+    }
 
-//     CompressedLed compressed_led(led_strip);
+    CompressedLed compressed_led(led_strip);
 
-//     // 3. 清除可能存在的残留显示
-//     led_strip_clear(led_strip);
-//     vTaskDelay(pdMS_TO_TICKS(500));
+    // 3. 清除可能存在的残留显示
+    led_strip_clear(led_strip);
+    vTaskDelay(pdMS_TO_TICKS(500));
 
-//     // 5. 务必刷新才能显示！
-//     led_strip_refresh(led_strip);
+    // 5. 务必刷新才能显示！
+    led_strip_refresh(led_strip);
 
-//     float angle = 0.0f;
-//     while (1) {
-//         compressed_led.set_compressed_led_by_angle(angle);
-//         angle += 1.0f;
+    float angle = 0.0f;
+    while (1) {
+        compressed_led.set_compressed_led_by_angle(angle);
+        angle += 1.0f;
 
-//         led_strip_refresh(led_strip);
+        led_strip_refresh(led_strip);
 
-//         vTaskDelay(pdMS_TO_TICKS(15));
-//     }
-// }
+        vTaskDelay(pdMS_TO_TICKS(15));
+    }
+}

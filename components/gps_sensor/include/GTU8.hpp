@@ -4,14 +4,17 @@
 #include <esp_log.h>
 #include <mutex>
 #include <string>
+#include <memory>
 
 namespace gps_sensor
 {
-struct Data
+enum class GPSStatus
 {
-    float latitude{0.0f};
-    float longitude{0.0f};
-    int   gps_nums{0};
+    NOT_POSITIONED = 0,      // 未定位
+    SPS_MODE_VALID = 1,      // 无差分，SPS模式，定位有效
+    DIFF_SPS_MODE_VALID = 2, // 带差分，SPS模式，定位有效
+    PPS_MODE_VALID = 3,      // PPS模式，定位有效
+    UNKNOWN = -1             // 未知状态
 };
 
 enum class SentenceType
@@ -48,6 +51,8 @@ class GGA : public SentenceBase
 public:
     GGA(const std::string& str);
 
+    GGA() = default;
+
     virtual ~GGA() override = default;
 
 private:
@@ -55,11 +60,11 @@ private:
 
 public:
     std::string utc_time_;         // UTC时间
-    std::string latitude_;         // 纬度
+    float latitude_;               // 纬度
     std::string lat_direction_;    // 纬度方向
-    std::string longitude_;        // 经度
+    float longitude_;              // 经度
     std::string lon_direction_;    // 经度方向
-    int gps_status_;               // GPS状态
+    GPSStatus   gps_status_{GPSStatus::NOT_POSITIONED}; // GPS状态
     int satellite_count_;          // 使用卫星数量
     double hdop_;                  // 水平精度因子
     double altitude_;              // 海平面高度
@@ -81,7 +86,7 @@ public:
 
     void init();
 
-    Data getData();
+    std::shared_ptr<GGA> getData();
 
     void update();
 
@@ -91,7 +96,9 @@ private:
 private:
     uart_port_t uart_port_;
 
-    Data data_;
+    std::shared_ptr<GGA> data_{nullptr};
     std::mutex data_mutex_;
 };
+
+void gpsTask(void *Params);
 }

@@ -8,6 +8,8 @@ const char* TAG = "GPS";
 
 constexpr int read_buffer_size = 128; // 读取数据的缓冲区大小
 
+float dmToDegrees(const std::string& dm_str);
+
 namespace gps_sensor
 {
 SentenceBase::SentenceBase(const std::string& str)
@@ -58,18 +60,17 @@ bool GGA::parse(const std::string& sentence)
     }
 
     // 纬度（格式：ddmm.mmmm）
-    latitude_ = fields[2];
+    latitude_ = dmToDegrees(fields[2]);
     lat_direction_ = fields[3];
 
     // 经度（格式：dddmm.mmmm）
-    longitude_ = fields[4];
+    longitude_ = dmToDegrees(fields[4]);
     lon_direction_ = fields[5];
 
     // GPS状态
-    if (!fields[6].empty()) {
-        gps_status_ = std::stoi(fields[6]);
-    } else {
-        gps_status_ = -1;
+    if (!fields[6].empty())
+    {
+        gps_status_ = static_cast<GPSStatus>(std::stoi(fields[6]));
     }
 
     // 使用卫星数量
@@ -118,7 +119,7 @@ GTU8::GTU8(const uart_port_t& uart_port)
 void GTU8::init()
 {}
 
-Data GTU8::getData()
+std::shared_ptr<GGA> GTU8::getData()
 {
     std::lock_guard<std::mutex> lock(data_mutex_);
     return data_;
@@ -174,15 +175,48 @@ void GTU8::parse_complete_sentences(std::string& buffer)
             {
                 ESP_LOGI(TAG, "Sentence: %s\n\n", sentence.c_str());
 
-                auto gga_sentence = GGA(sentence);
-                ESP_LOGI(TAG, "GGA latitude: %s%s longitude: %s%s gps_status: %d satellite_count: %d\n",
-                                gga_sentence.latitude_.c_str(), gga_sentence.lat_direction_.c_str(),
-                                gga_sentence.longitude_.c_str(), gga_sentence.lon_direction_.c_str(),
-                                gga_sentence.gps_status_, gga_sentence.satellite_count_);
+                auto gga_ptr = std::make_shared<GGA>(sentence);
+                ESP_LOGI(TAG, "GGA latitude: %f%s longitude: %f%s gps_status: %d satellite_count: %d\n",
+                                gga_ptr->latitude_, gga_ptr->lat_direction_.c_str(),
+                                gga_ptr->longitude_, gga_ptr->lon_direction_.c_str(),
+                                static_cast<int>(gga_ptr->gps_status_), gga_ptr->satellite_count_);
+
+                std::lock_guard<std::mutex> lock(data_mutex_);
+                data_ = gga_ptr;
             }
         }
 
         pos = 0;
     }
 }
+
+void gpsTask(void *Params)
+{
+
+}
+}
+
+// 将度分格式(ddmm.mmmm)转换为十进制度格式
+float dmToDegrees(const std::string& dm_str)
+{
+    if (dm_str.empty())
+    {
+        return 0.0f;
+    }
+
+    // 找到小数点位置，分隔度和分
+    size_t dot_pos = dm_str.find('.');
+    if (dot_pos == std::string::npos || dot_pos < 2)
+    {
+        return 0.0f;
+    }
+
+    std::string deg_str = dm_str.substr(0, dot_pos - 2);
+    std::string min_str = dm_str.substr(dot_pos - 2);
+    ESP_LOGI(TAG, "Original: %s Degrees: %s Minutes: %s\n", dm_str.c_str(), deg_str.c_str(), min_str.c_str());
+
+    float degrees = std::stof(deg_str);
+    float minutes = std::stof(min_str);
+
+    return degrees + minutes / 60.0f;
 }
