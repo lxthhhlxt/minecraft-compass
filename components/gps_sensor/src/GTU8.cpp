@@ -3,6 +3,8 @@
 #include <cmath>
 #include <sstream>
 #include <vector>
+#include "status_manager.hpp"
+#include "data_manager.hpp"
 
 const char* TAG = "GPS";
 
@@ -12,8 +14,8 @@ float dmToDegrees(const std::string& dm_str);
 
 namespace gps_sensor
 {
-SentenceBase::SentenceBase(const std::string& str)
-    : str_(str)
+SentenceBase::SentenceBase(const std::string& sentence)
+    : str_(sentence)
 {}
 
 bool SentenceBase::empty()
@@ -21,8 +23,8 @@ bool SentenceBase::empty()
     return type_ == SentenceType::UNKNOWN;
 }
 
-GGA::GGA(const std::string& str)
-    : SentenceBase(str)
+GGA::GGA(const std::string& sentence)
+    : SentenceBase(sentence)
 {
     parse(str_);
 }
@@ -112,17 +114,91 @@ bool GGA::parse(const std::string& sentence)
     return true;
 }
 
+GSV::GSV(const std::string& sentence)
+    : SentenceBase(sentence)
+{
+    parse(sentence);
+}
+
+bool GSV::parse(const std::string& sentence)
+{
+    if (sentence.substr(0, 6) != "$GPGSV" && sentence.substr(0, 6) != "$BDGSV")
+    {
+        ESP_LOGE(TAG, "Sentence type not GSV.");
+        return false;
+    }
+
+    // 分割字符串
+    std::vector<std::string> fields;
+    std::stringstream ss(sentence);
+    std::string field;
+
+    while (std::getline(ss, field, ','))
+    {
+        fields.push_back(field);
+    }
+
+    // 检查字段数量（至少应有3个字段）
+    if (fields.size() != 4)
+    {
+        ESP_LOGE(TAG, "Sentence parts less than 4.");
+        return false;
+    }
+
+    // GSV语句总数
+    if (!fields[1].empty())
+    {
+        total_gsv_num_ = static_cast<uint8_t>(std::stoi(fields[1]));
+    }
+
+    // 当前GSV语句序号
+    if (!fields[2].empty())
+    {
+        current_gsv_num_ = static_cast<uint8_t>(std::stoi(fields[2]));
+    }
+
+    // 当前卫星总数
+    if (!fields[3].empty())
+    {
+        satellite_num_ = static_cast<uint8_t>(std::stoi(fields[3]));
+    }
+    return true;
+}
+
 GTU8::GTU8(const uart_port_t& uart_port)
     : uart_port_(uart_port)
-{}
+{
+    data_mutex_ = xSemaphoreCreateMutex();
+}
+
+GTU8::~GTU8()
+{
+    vSemaphoreDelete(data_mutex_);
+}
 
 void GTU8::init()
 {}
 
-std::shared_ptr<GGA> GTU8::getData()
+std::shared_ptr<GGA> GTU8::getGGAData()
 {
-    std::lock_guard<std::mutex> lock(data_mutex_);
-    return data_;
+    if (xSemaphoreTake(data_mutex_, pdMS_TO_TICKS(100)) == pdTRUE)
+    {
+        auto result = gga_data_;
+        xSemaphoreGive(data_mutex_);
+        return result;
+    }
+    return nullptr;
+}
+
+std::shared_ptr<GSV> GTU8::getGSVData()
+{
+    if (xSemaphoreTake(data_mutex_, pdMS_TO_TICKS(100)) == pdTRUE)
+    {
+        auto result = gsv_data_;
+        xSemaphoreGive(data_mutex_);
+        return result;
+    }
+    return nullptr;
 }
 
 void GTU8::update()
@@ -144,6 +220,8 @@ void GTU8::update()
                 buffer_.append((char*)data, len);
 
                 parse_complete_sentences(buffer_);
+
+                updateGPSData();
 
                 // 将接收到的数据打印为字符串（假设是文本数据）
                 // printf("Received: '%.*s'\n", len, (char*)data);
@@ -181,12 +259,42 @@ void GTU8::parse_complete_sentences(std::string& buffer)
                                 gga_ptr->longitude_, gga_ptr->lon_direction_.c_str(),
                                 static_cast<int>(gga_ptr->gps_status_), gga_ptr->satellite_count_);
 
-                std::lock_guard<std::mutex> lock(data_mutex_);
-                data_ = gga_ptr;
+                if (xSemaphoreTake(data_mutex_, pdMS_TO_TICKS(100)) == pdTRUE)
+                {
+                    gga_data_ = gga_ptr;
+                    xSemaphoreGive(data_mutex_);
+                }
+                ESP_LOGE(TAG, "获取data锁失败");
+            }
+            else if (sentence.substr(0, 6) == "$GPGSV" || sentence.substr(0, 6) == "$BDGSV")
+            {
+                ESP_LOGI(TAG, "Sentence: %s\n\n", sentence.c_str());
+
+                auto gsv_ptr = std::make_shared<GSV>(sentence);
+                ESP_LOGI(TAG, "GSV total_gsv_num: %d current_gsv_num: %d satellite_num: %d\n",
+                              static_cast<int>(gsv_ptr->total_gsv_num_),
+                              static_cast<int>(gsv_ptr->current_gsv_num_),
+                              static_cast<int>(gsv_ptr->satellite_num_));
+
+                if (xSemaphoreTake(data_mutex_, pdMS_TO_TICKS(100)) == pdTRUE)
+                {
+                    gsv_data_ = gsv_ptr;
+                    xSemaphoreGive(data_mutex_);
+                }
+                ESP_LOGE(TAG, "获取data锁失败");
             }
         }
 
         pos = 0;
+    }
+}
+
+void GTU8::updateGPSData()
+{
+    if (xSemaphoreTake(data_mutex_, pdMS_TO_TICKS(100)) == pdTRUE)
+    {
+        auto gps_data = GPSData();
+        xSemaphoreGive(data_mutex_);
     }
 }
 

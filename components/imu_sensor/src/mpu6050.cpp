@@ -6,6 +6,7 @@
 #include "nvs_flash.h"
 #include "nvs.h"
 #include <cstddef>
+#include "status_manager.hpp"
 
 static const char *TAG = "MPU6050";
 
@@ -72,6 +73,7 @@ esp_err_t MPU6050::init()
         ESP_LOGI(TAG, "加载校准数据成功 accel_offset:%f, %f, %f, gyro_offset:%f, %f, %f",
                       offset_.accel_offset_x, offset_.accel_offset_y, offset_.accel_offset_z,
                       offset_.gyro_offset_x, offset_.gyro_offset_y, offset_.gyro_offset_z);
+        StatusManager::getInstance().setMPU6050Status(SensorStatus::READY);
     }
 
     return ESP_OK;
@@ -79,6 +81,8 @@ esp_err_t MPU6050::init()
 
 bool MPU6050::calibrate()
 {
+    StatusManager::getInstance().setMPU6050Status(SensorStatus::CALIBRATING);
+
     ESP_LOGI(TAG, "准备校准加速度计和陀螺仪...");
     vTaskDelay(pdMS_TO_TICKS(2000));
 
@@ -105,6 +109,7 @@ bool MPU6050::calibrate()
         else
         {
             ESP_LOGE(TAG, "校准失败");
+            StatusManager::getInstance().setMPU6050Status(SensorStatus::NOT_INIT);
             return false;
         }
     }
@@ -122,6 +127,8 @@ bool MPU6050::calibrate()
     ESP_LOGI(TAG, "陀螺仪偏置: %f, %f, %f", offset_.gyro_offset_x, offset_.gyro_offset_y, offset_.gyro_offset_z);
 
     saveOffsets(offset_);
+
+    StatusManager::getInstance().setMPU6050Status(SensorStatus::READY);
     return true;
 }
 
@@ -157,7 +164,7 @@ std::optional<std::shared_ptr<Data>> MPU6050::get_data()
     return data;
 }
 
-std::optional<std::shared_ptr<Data>> MPU6050::get_calibrated_data()
+std::optional<std::shared_ptr<Data>> MPU6050::get_cal_data()
 {
     auto raw_data_opt = get_data();
     if (raw_data_opt == std::nullopt)

@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <stdio.h>
+#include "compressed_ble.hpp"
 #include "compressed_led.hpp"
 #include "esp_err.h"
 #include "freertos/FreeRTOS.h"
@@ -56,8 +57,10 @@ void setup_uart() {
 
 extern "C" void app_main()
 {
-    xTaskCreate(imu_sensor::imuTask,     "imu_task", 4096, NULL, 3, NULL);
-    xTaskCreate(gps_sensor::gpsTask,     "gps_task", 4096, NULL, 2, NULL);
+    nvs_init();
+    xTaskCreate(imu_sensor::imuTask,     "imu_task", 4096, NULL, 4, NULL);
+    // xTaskCreate(gps_sensor::gpsTask,     "gps_task", 4096, NULL, 3, NULL);
+    // xTaskCreate(compressed_ble::bleTask, "ble_task", 4096, NULL, 2, NULL);
     xTaskCreate(compressed_led::ledTask, "led_task", 4096, NULL, 1, NULL);
 }
 

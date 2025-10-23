@@ -1,4 +1,8 @@
 #include "compressed_led.hpp"
+#include "status_manager.hpp"
+#include "data_manager.hpp"
+#include "esp_timer.h"
+#include "esp_log.h"
 
 // 硬件配置
 constexpr gpio_num_t LED_STRIP_GPIO_NUM = GPIO_NUM_6;   // 连接WS2812 DIN的GPIO引脚
@@ -22,9 +26,91 @@ constexpr uint32_t RED_B = 0;
 
 namespace compressed_led
 {
-CompressedLed::CompressedLed(led_strip_handle_t led_strip)
-: led_strip_(led_strip)
-{};
+CompressedLed::CompressedLed()
+{
+    init();
+}
+
+void CompressedLed::setLedByStatus(DisplayState &display_state)
+{
+    static DisplayState latest_state{DisplayState::DISPLAY_DESTNATION};
+
+    if (latest_state != display_state)
+    {
+        ESP_LOGI("LED", "DisplayState: %d\n", static_cast<int>(display_state));
+        latest_state = display_state;
+    }
+
+    led_strip_clear(led_strip_);
+    switch (display_state)
+    {
+        case DisplayState::DISPLAY_NONE:
+        {
+            setNoneLed();
+            break;
+        }
+        case DisplayState::DISPLAY_MPU6050_CALIBRATING:
+        {
+            set6050CalibratingLed();
+            break;
+        }
+        case DisplayState::DISPLAY_QMC5883P_CALIBRATING:
+        {
+            set5883CalibratingLed();
+            break;
+        }
+        case DisplayState::DISPLAY_GPS_CALIBRATING:
+        {
+            break;
+        }
+        case DisplayState::DISPLAY_COMPASS:
+        {
+            break;
+        }
+        case DisplayState::DISPLAY_DESTNATION:
+        {
+            break;
+        }
+    }
+    led_strip_refresh(led_strip_);
+}
+
+void CompressedLed::init()
+{
+    // 1. 配置LED Strip
+    led_strip_config_t strip_config = {
+        .strip_gpio_num = LED_STRIP_GPIO_NUM,
+        .max_leds = LED_STRIP_LED_NUMBER,
+        .led_pixel_format = LED_PIXEL_FORMAT_GRB, // 注意颜色格式！
+        .led_model = LED_MODEL_WS2812,
+        .flags = {
+            .invert_out = false,
+        },
+    };
+
+    led_strip_rmt_config_t rmt_config = {
+        .clk_src = RMT_CLK_SRC_DEFAULT,
+        .resolution_hz = LED_STRIP_RMT_RES_HZ,
+        .mem_block_symbols = 0,
+        .flags = {
+            .with_dma = false,
+        },
+    };
+
+    // 2. 初始化LED Strip，并检查错误
+    esp_err_t err = led_strip_new_rmt_device(&strip_config, &rmt_config, &led_strip_);
+    if (err != ESP_OK) {
+        // 打印错误信息
+        return;
+    }
+
+    // 3. 清除可能存在的残留显示
+    led_strip_clear(led_strip_);
+    vTaskDelay(pdMS_TO_TICKS(500));
+
+    // 5. 务必刷新才能显示！
+    led_strip_refresh(led_strip_);
+}
 
 void CompressedLed::set_compressed_led_by_angle(float angle)
 {
@@ -254,8 +340,37 @@ void CompressedLed::set_compressed_led(const std::vector<uint8_t>& red_led_nums,
     set_leds_rgb(light_gray_led_nums, LIGHT_GRAY_R, LIGHT_GRAY_G, LIGHT_GRAY_B);
 }
 
+void CompressedLed::setNoneLed()
+{
+    led_strip_set_pixel(led_strip_, 0, 255, 0, 0);
+}
+
+void CompressedLed::set6050CalibratingLed()
+{
+    led_strip_set_pixel(led_strip_, 1, 0, 255, 0);
+}
+
+void CompressedLed::set5883CalibratingLed()
+{
+    led_strip_set_pixel(led_strip_, 2, 0, 0, 255);
+}
+
 void ledTask(void *Params)
 {
+    auto compressed_led = CompressedLed();
+    auto display_state{DisplayState::DISPLAY_NONE};
 
+    while (1)
+    {
+        int32_t start_time = esp_timer_get_time() / 1000;
+
+        display_state = StatusManager::getInstance().getDisplayState();
+
+        compressed_led.setLedByStatus(display_state);
+
+        int32_t end_time = esp_timer_get_time() / 1000;
+        int32_t sleep_time = 10 - std::max((end_time - start_time), int32_t(0));
+        vTaskDelay(pdMS_TO_TICKS(sleep_time)); // 每1秒读取一次
+    }
 }
 }

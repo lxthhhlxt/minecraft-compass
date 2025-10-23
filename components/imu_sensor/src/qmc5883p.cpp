@@ -6,6 +6,7 @@
 #include "math.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "status_manager.hpp"
 
 static const char *TAG = "QMC5883P";
 
@@ -52,6 +53,7 @@ esp_err_t QMC5883P::init()
         ESP_LOGI(TAG, "加载校准数据成功 offset:%f, %f, %f, scale:%f, %f, %f",
                       calibration_param_.offset_x, calibration_param_.offset_y, calibration_param_.offset_z,
                       calibration_param_.scale_x, calibration_param_.scale_y, calibration_param_.scale_z);
+        StatusManager::getInstance().setQMC5883PStatus(SensorStatus::READY);
     }
 
     return ESP_OK;
@@ -59,6 +61,8 @@ esp_err_t QMC5883P::init()
 
 bool QMC5883P::calibrate()
 {
+    StatusManager::getInstance().setQMC5883PStatus(SensorStatus::CALIBRATING);
+
     ESP_LOGI(TAG, "=== 磁力计校准模式 ===");
     ESP_LOGI(TAG, "请缓慢地在空中画'8'字，持续约60秒");
     vTaskDelay(pdMS_TO_TICKS(2000));
@@ -95,6 +99,7 @@ bool QMC5883P::calibrate()
         else
         {
             ESP_LOGE(TAG, "校准失败");
+            StatusManager::getInstance().setQMC5883PStatus(SensorStatus::NOT_INIT);
             return false;
         }
 
@@ -122,6 +127,8 @@ bool QMC5883P::calibrate()
                   calibration_param_.scale_x, calibration_param_.scale_y, calibration_param_.scale_z);
 
     saveCalibrationParam(calibration_param_);
+
+    StatusManager::getInstance().setQMC5883PStatus(SensorStatus::READY);
     return true;
 }
 

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/semphr.h>
 #include "hal/uart_types.h"
 #include <esp_log.h>
 #include <mutex>
@@ -32,7 +34,7 @@ enum class SentenceType
 class SentenceBase
 {
 public:
-    SentenceBase(const std::string& str);
+    SentenceBase(const std::string& sentence);
 
     virtual ~SentenceBase() = default;
 
@@ -49,7 +51,7 @@ protected:
 class GGA : public SentenceBase
 {
 public:
-    GGA(const std::string& str);
+    GGA(const std::string& sentence);
 
     GGA() = default;
 
@@ -75,6 +77,24 @@ public:
     std::string diff_station_id_;  // 差分基站ID
 };
 
+class GSV : public SentenceBase
+{
+public:
+    GSV(const std::string& sentence);
+
+    GSV() = default;
+
+    virtual ~GSV() override = default;
+
+private:
+    bool parse(const std::string& sentence) override;
+
+public:
+    uint8_t total_gsv_num_{0};
+    uint8_t current_gsv_num_{0};
+    uint8_t satellite_num_{0};
+};
+
 class GTU8
 {
 public:
@@ -82,22 +102,27 @@ public:
 
     GTU8(const GTU8&) = default;
 
-    ~GTU8() = default;
+    ~GTU8();
 
     void init();
 
-    std::shared_ptr<GGA> getData();
+    std::shared_ptr<GGA> getGGAData();
+
+    std::shared_ptr<GSV> getGSVData();
 
     void update();
 
 private:
     void parse_complete_sentences(std::string& buffer);
 
+    void updateGPSData();
+
 private:
     uart_port_t uart_port_;
 
-    std::shared_ptr<GGA> data_{nullptr};
-    std::mutex data_mutex_;
+    std::shared_ptr<GGA> gga_data_{nullptr};
+    std::shared_ptr<GSV> gsv_data_{nullptr};
+    SemaphoreHandle_t data_mutex_;
 };
 
 void gpsTask(void *Params);

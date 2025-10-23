@@ -41,29 +41,7 @@ struct EulerAngles {
     float roll, pitch, yaw;
 };
 
-// 将四元数转换为欧拉角（ZYX顺序）
-EulerAngles quaternionToEuler(const Quaternion& q) {
-    EulerAngles angles;
 
-    // 计算滚转 (x轴旋转)
-    double sinr_cosp = 2 * (q.w * q.x + q.y * q.z);
-    double cosr_cosp = 1 - 2 * (q.x * q.x + q.y * q.y);
-    angles.roll = std::atan2(sinr_cosp, cosr_cosp);
-
-    // 计算俯仰 (y轴旋转)
-    double sinp = 2 * (q.w * q.y - q.z * q.x);
-    if (std::abs(sinp) >= 1)
-        angles.pitch = std::copysign(M_PI / 2, sinp); // 使用90度如果超出范围
-    else
-        angles.pitch = std::asin(sinp);
-
-    // 计算偏航 (z轴旋转)
-    double siny_cosp = 2 * (q.w * q.z + q.x * q.y);
-    double cosy_cosp = 1 - 2 * (q.y * q.y + q.z * q.z);
-    angles.yaw = std::atan2(siny_cosp, cosy_cosp);
-
-    return angles;
-}
 
 // 将弧度转换为角度
 double radToDeg(double radians) {

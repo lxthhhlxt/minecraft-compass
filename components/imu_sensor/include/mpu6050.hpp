@@ -11,7 +11,6 @@ struct Data
     float accel_x{0.0f};
     float accel_y{0.0f};
     float accel_z{0.0f};
-
     float gyro_x{0.0f};
     float gyro_y{0.0f};
     float gyro_z{0.0f};
@@ -41,7 +40,7 @@ public:
 
     std::optional<std::shared_ptr<Data>> get_data();
 
-    std::optional<std::shared_ptr<Data>> get_calibrated_data();
+    std::optional<std::shared_ptr<Data>> get_cal_data();
 
 private:
     void saveOffsets(Offset& offset);

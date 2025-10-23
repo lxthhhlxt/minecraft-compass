@@ -20,6 +20,24 @@ struct Data
     float mag_z{0.0f};
 };
 
+
+// 定义四元数结构体
+struct Quaternion
+{
+    double w;
+    double x;
+    double y;
+    double z;
+};
+
+// 定义欧拉角结构体（弧度）
+struct EulerAngles
+{
+    float roll;
+    float pitch;
+    float yaw;
+};
+
 class IMU9DoF
 {
 public:
