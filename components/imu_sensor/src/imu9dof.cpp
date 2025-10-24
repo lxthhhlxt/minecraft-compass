@@ -2,6 +2,7 @@
 #include "esp_err.h"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "data_manager.hpp"
 #include <cmath>
 
 extern "C"
@@ -147,13 +148,18 @@ void IMU9DoF::calc9AsixData()
 
     // 转换为欧拉角
     EulerAngles euler = quaternionToEuler(q);
-    static int count = 0;
-    if (count++ % 10 == 0)
-    {
-        ESP_LOGI(TAG, "欧拉角: Yaw=%.2f, Pitch=%.2f, Roll=%.2f",
-                 radToDeg(euler.yaw), radToDeg(euler.pitch), radToDeg(euler.roll));
-    }
+    IMUData imu_data;
+    imu_data.yaw = radToDeg(euler.yaw);
+    imu_data.pitch = radToDeg(euler.pitch);
+    imu_data.roll = radToDeg(euler.roll);
+    DataManager::getInstance().setIMUData(imu_data);
 
+    // static int count = 0;
+    // if (count++ % 10 == 0)
+    // {
+    //     ESP_LOGI(TAG, "欧拉角: Yaw=%.2f, Pitch=%.2f, Roll=%.2f",
+    //              radToDeg(euler.yaw), radToDeg(euler.pitch), radToDeg(euler.roll));
+    // }
 }
 
 void imuTask(void *Params)

@@ -41,7 +41,7 @@ void CompressedLed::setLedByStatus(DisplayState &display_state)
         latest_state = display_state;
     }
 
-    led_strip_clear(led_strip_);
+    // led_strip_clear(led_strip_);
     switch (display_state)
     {
         case DisplayState::DISPLAY_NONE:
@@ -65,6 +65,11 @@ void CompressedLed::setLedByStatus(DisplayState &display_state)
         }
         case DisplayState::DISPLAY_COMPASS:
         {
+            if (auto imu_data = DataManager::getInstance().getLatestIMUData(); imu_data)
+            {
+                setCompressedLedByAngle(-imu_data->yaw);
+                // ESP_LOGI("LED", "Yaw=%.2f", -imu_data->yaw);
+            }
             break;
         }
         case DisplayState::DISPLAY_DESTNATION:
@@ -112,209 +117,181 @@ void CompressedLed::init()
     led_strip_refresh(led_strip_);
 }
 
-void CompressedLed::set_compressed_led_by_angle(float angle)
+void CompressedLed::setCompressedLedByAngle(float angle)
 {
-    while (angle > 360.0)
+    while (angle > 360.0 || angle < 0)
     {
-        angle -= 360.0;
+        if (angle > 360.0)
+        {
+            angle -= 360.0;
+        }
+        else if (angle < 0)
+        {
+            angle += 360.0;
+        }
     }
-    uint8_t zone = (angle + (360.0 / 27.0) / 2.0) / (360.0 / 27.0);
 
-    switch (zone)
+    if (angle >= 348.7 || angle < 11.3)
     {
-        case 0:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 34, 44}, // red
-                               std::vector<uint8_t>{22, 11}, // deep gray
-                               std::vector<uint8_t>{20}); // light gray
-            break;
-        }
-        case 1:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 34, 35, 43}, // red
-                               std::vector<uint8_t>{11, 20}, // deep gray
-                               std::vector<uint8_t>{22}); // light gray
-            break;
-        }
-        case 2:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 34, 35, 43, 42}, // red
-                               std::vector<uint8_t>{11, 20}, // deep gray
-                               std::vector<uint8_t>{10, 22}); // light gray
-            break;
-        }
-        case 3:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 35, 36, 42, 41}, // red
-                               std::vector<uint8_t>{10}, // deep gray
-                               std::vector<uint8_t>{22}); // light gray
-            break;
-        }
-        case 4:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 35, 36, 37}, // red
-                               std::vector<uint8_t>{10}, // deep gray
-                               std::vector<uint8_t>{9, 22}); // light gray
-            break;
-        }
-        case 5:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 35, 36, 37, 38}, // red
-                               std::vector<uint8_t>{10}, // deep gray
-                               std::vector<uint8_t>{9, 22}); // light gray
-            break;
-        }
-        case 6:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 19, 36, 37, 38}, // red
-                               std::vector<uint8_t>{11, 23}, // deep gray
-                               std::vector<uint8_t>{22, 34}); // light gray
-            break;
-        }
-        case 7:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 19, 18, 17}, // red
-                               std::vector<uint8_t>{11, 23}, // deep gray
-                               std::vector<uint8_t>{22, 34}); // light gray
-            break;
-        }
-        case 8:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 19, 13, 14}, // red
-                               std::vector<uint8_t>{11, 23}, // deep gray
-                               std::vector<uint8_t>{22, 34}); // light gray
-            break;
-        }
-        case 9:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 12, 13, 14}, // red
-                               std::vector<uint8_t>{32}, // deep gray
-                               std::vector<uint8_t>{22, 33}); // light gray
-            break;
-        }
-        case 10:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 20, 12, 13, 0}, // red
-                               std::vector<uint8_t>{}, // deep gray
-                               std::vector<uint8_t>{22, 33}); // light gray
-            break;
-        }
-        case 11:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 11, 12, 1, 0}, // red
-                               std::vector<uint8_t>{22, 20}, // deep gray
-                               std::vector<uint8_t>{33, 34}); // light gray
-            break;
-        }
-        case 12:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 11, 12, 1}, // red
-                               std::vector<uint8_t>{22, 20}, // deep gray
-                               std::vector<uint8_t>{34}); // light gray
-            break;
-        }
-        case 13:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 11, 2}, // red
-                               std::vector<uint8_t>{22, 20}, // deep gray
-                               std::vector<uint8_t>{34}); // light gray
-            break;
-        }
-        case 14:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 10, 11, 3}, // red
-                               std::vector<uint8_t>{22, 20}, // deep gray
-                               std::vector<uint8_t>{34}); // light gray
-            break;
-        }
-        case 15:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 10, 11, 4, 3}, // red
-                               std::vector<uint8_t>{22, 20}, // deep gray
-                               std::vector<uint8_t>{34, 35}); // light gray
-            break;
-        }
-        case 16:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 10, 9, 5, 4}, // red
-                               std::vector<uint8_t>{35}, // deep gray
-                               std::vector<uint8_t>{20}); // light gray
-            break;
-        }
-        case 17:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 8, 9, 10, 5}, // red
-                               std::vector<uint8_t>{20, 36}, // deep gray
-                               std::vector<uint8_t>{35}); // light gray
-            break;
-        }
-        case 18:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 23, 10, 9, 8, 7,}, // red
-                               std::vector<uint8_t>{20, 36}, // deep gray
-                               std::vector<uint8_t>{35}); // light gray
-            break;
-        }
-        case 19:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 23, 9, 8, 7}, // red
-                               std::vector<uint8_t>{19, 11}, // deep gray
-                               std::vector<uint8_t>{20, 34}); // light gray
-            break;
-        }
-        case 20:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 23, 24, 25, 26}, // red
-                               std::vector<uint8_t>{11, 19}, // deep gray
-                               std::vector<uint8_t>{20, 34}); // light gray
-            break;
-        }
-        case 21:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 23, 32, 31, 30}, // red
-                               std::vector<uint8_t>{11, 19}, // deep gray
-                               std::vector<uint8_t>{20, 34}); // light gray
-            break;
-        }
-        case 22:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 33, 32, 31, 30}, // red
-                               std::vector<uint8_t>{12}, // deep gray
-                               std::vector<uint8_t>{20, 13}); // light gray
-            break;
-        }
-        case 23:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 33, 32, 31, 47}, // red
-                               std::vector<uint8_t>{12}, // deep gray
-                               std::vector<uint8_t>{13, 20}); // light gray
-            break;
-        }
-        case 24:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 22, 33, 32, 46, 47}, // red
-                               std::vector<uint8_t>{12}, // deep gray
-                               std::vector<uint8_t>{20}); // light gray
-            break;
-        }
-        case 25:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 34, 33, 45, 46}, // red
-                               std::vector<uint8_t>{11, 22}, // deep gray
-                               std::vector<uint8_t>{12, 20}); // light gray
-            break;
-        }
-        case 26:
-        {
-            set_compressed_led(std::vector<uint8_t>{21, 34, 33, 45}, // red
-                               std::vector<uint8_t>{11, 22}, // deep gray
-                               std::vector<uint8_t>{20}); // light gray
-            break;
-        }
-        default:
-        {
-            break;
-        }
+        set_compressed_led(std::vector<uint8_t>{21, 34, 44}, // red
+                           std::vector<uint8_t>{22, 11}, // deep gray
+                           std::vector<uint8_t>{20}); // light gray
+    }
+    else if (angle >= 11.3 && angle < 31)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 34, 35, 43}, // red
+                           std::vector<uint8_t>{11, 20}, // deep gray
+                           std::vector<uint8_t>{22}); // light gray
+    }
+    else if (angle >= 31 && angle < 59.1)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 34, 35, 43, 42}, // red
+                           std::vector<uint8_t>{11, 20}, // deep gray
+                           std::vector<uint8_t>{10, 22}); // light gray
+    }
+    else if (angle >= 59.1 && angle < 66.9)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 35, 36, 42, 41}, // red
+                           std::vector<uint8_t>{10}, // deep gray
+                           std::vector<uint8_t>{22}); // light gray
+    }
+    else if (angle >= 66.9 && angle < 71.7)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 35, 36, 37}, // red
+                           std::vector<uint8_t>{10}, // deep gray
+                           std::vector<uint8_t>{9, 22}); // light gray
+    }
+    else if (angle >= 71.7 && angle < 82)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 35, 36, 37, 38}, // red
+                           std::vector<uint8_t>{10}, // deep gray
+                           std::vector<uint8_t>{9, 22}); // light gray
+    }
+    else if (angle >= 82 && angle < 83.8)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 19, 36, 37, 38}, // red
+                           std::vector<uint8_t>{11, 23}, // deep gray
+                           std::vector<uint8_t>{22, 34}); // light gray
+    }
+    else if (angle >= 83.8 && angle < 96.5)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 19, 18, 17}, // red
+                           std::vector<uint8_t>{11, 23}, // deep gray
+                           std::vector<uint8_t>{22, 34}); // light gray
+    }
+    else if (angle >= 96.5 && angle < 113.4)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 19, 13, 14}, // red
+                           std::vector<uint8_t>{11, 23}, // deep gray
+                           std::vector<uint8_t>{22, 34}); // light gray
+    }
+    else if (angle >= 113.4 && angle < 121.2)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 12, 13, 14}, // red
+                           std::vector<uint8_t>{32}, // deep gray
+                           std::vector<uint8_t>{22, 33}); // light gray
+    }
+    else if (angle >= 121.2 && angle < 135.2)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 20, 12, 13, 0}, // red
+                           std::vector<uint8_t>{}, // deep gray
+                           std::vector<uint8_t>{22, 33}); // light gray
+    }
+    else if (angle >= 135.2 && angle < 149.2)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 11, 12, 1, 0}, // red
+                           std::vector<uint8_t>{22, 20}, // deep gray
+                           std::vector<uint8_t>{33, 34}); // light gray
+    }
+    else if (angle >= 149.2 && angle < 168.9)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 11, 12, 1}, // red
+                           std::vector<uint8_t>{22, 20}, // deep gray
+                           std::vector<uint8_t>{34}); // light gray
+    }
+    else if (angle >= 168.9 && angle < 191.5)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 11, 2}, // red
+                           std::vector<uint8_t>{22, 20}, // deep gray
+                           std::vector<uint8_t>{34}); // light gray
+    }
+    else if (angle >= 191.5 && angle < 211.2)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 10, 11, 3}, // red
+                           std::vector<uint8_t>{22, 20}, // deep gray
+                           std::vector<uint8_t>{34}); // light gray
+    }
+    else if (angle >= 211.2 && angle < 225.2)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 10, 11, 4, 3}, // red
+                           std::vector<uint8_t>{22, 20}, // deep gray
+                           std::vector<uint8_t>{34, 35}); // light gray
+    }
+    else if (angle >= 225.2 && angle < 234.7)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 10, 9, 5, 4}, // red
+                           std::vector<uint8_t>{35}, // deep gray
+                           std::vector<uint8_t>{20}); // light gray
+    }
+    else if (angle >= 234.7 && angle < 247)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 8, 9, 10, 5}, // red
+                           std::vector<uint8_t>{20, 36}, // deep gray
+                           std::vector<uint8_t>{35}); // light gray
+    }
+    else if (angle >= 247 && angle < 251.8)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 23, 10, 9, 8, 7,}, // red
+                           std::vector<uint8_t>{20, 36}, // deep gray
+                           std::vector<uint8_t>{35}); // light gray
+    }
+    else if (angle >= 251.8 && angle < 265)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 23, 9, 8, 7}, // red
+                           std::vector<uint8_t>{19, 11}, // deep gray
+                           std::vector<uint8_t>{20, 34}); // light gray
+    }
+    else if (angle >= 265 && angle < 275.4)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 23, 24, 25, 26}, // red
+                           std::vector<uint8_t>{11, 19}, // deep gray
+                           std::vector<uint8_t>{20, 34}); // light gray
+    }
+    else if (angle >= 275.4 && angle < 288.6)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 23, 32, 31, 30}, // red
+                           std::vector<uint8_t>{11, 19}, // deep gray
+                           std::vector<uint8_t>{20, 34}); // light gray
+    }
+    else if (angle >= 288.6 && angle < 293.4)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 33, 32, 31, 30}, // red
+                           std::vector<uint8_t>{12}, // deep gray
+                           std::vector<uint8_t>{20, 13}); // light gray
+    }
+    else if (angle >= 293.4 && angle < 305.7)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 33, 32, 31, 47}, // red
+                           std::vector<uint8_t>{12}, // deep gray
+                           std::vector<uint8_t>{13, 20}); // light gray
+    }
+    else if (angle >= 305.7 && angle < 315.2)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 22, 33, 32, 46, 47}, // red
+                           std::vector<uint8_t>{12}, // deep gray
+                           std::vector<uint8_t>{20}); // light gray
+    }
+    else if (angle >= 315.2 && angle < 329.2)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 34, 33, 45, 46}, // red
+                           std::vector<uint8_t>{11, 22}, // deep gray
+                           std::vector<uint8_t>{12, 20}); // light gray
+    }
+    else if (angle >= 329.2 && angle < 348.7)
+    {
+        set_compressed_led(std::vector<uint8_t>{21, 34, 33, 45}, // red
+                           std::vector<uint8_t>{11, 22}, // deep gray
+                           std::vector<uint8_t>{20}); // light gray
     }
 }
 
@@ -369,7 +346,7 @@ void ledTask(void *Params)
         compressed_led.setLedByStatus(display_state);
 
         int32_t end_time = esp_timer_get_time() / 1000;
-        int32_t sleep_time = 10 - std::max((end_time - start_time), int32_t(0));
+        int32_t sleep_time = 100 - std::max((end_time - start_time), int32_t(0));
         vTaskDelay(pdMS_TO_TICKS(sleep_time)); // 每1秒读取一次
     }
 }

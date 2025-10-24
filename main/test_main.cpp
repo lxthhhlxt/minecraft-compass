@@ -425,7 +425,7 @@ extern "C" void app_main(void)
 
     float angle = 0.0f;
     while (1) {
-        compressed_led.set_compressed_led_by_angle(angle);
+        compressed_led.setCompressedLedByAngle(angle);
         angle += 1.0f;
 
         led_strip_refresh(led_strip);

@@ -20,7 +20,7 @@ public:
 private:
     void init();
 
-    void set_compressed_led_by_angle(float angle);
+    void setCompressedLedByAngle(float angle);
 
     void set_leds_rgb(const std::vector<uint8_t>& led_nums, const uint32_t r, const uint32_t g, const uint32_t b);
 
