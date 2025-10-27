@@ -61,6 +61,9 @@ void CompressedLed::setLedByStatus(DisplayState &display_state)
         }
         case DisplayState::DISPLAY_GPS_CALIBRATING:
         {
+            setGPSCalibratingLed();
+            auto satellite_num = DataManager::getInstance().getLatestGPSData()->satellite_num;
+            // ESP_LOGI("LED", "SatelliteNum=%d", static_cast<int>(satellite_num));
             break;
         }
         case DisplayState::DISPLAY_COMPASS:
@@ -69,6 +72,12 @@ void CompressedLed::setLedByStatus(DisplayState &display_state)
             {
                 setCompressedLedByAngle(-imu_data->yaw);
                 // ESP_LOGI("LED", "Yaw=%.2f", -imu_data->yaw);
+
+                auto gps_data = DataManager::getInstance().getLatestGPSData();
+                // ESP_LOGI("LED", "latitude=%f, longtitude=%f, SatelliteNum=%d",
+                //          gps_data->coordinate.latitude,
+                //          gps_data->coordinate.longitude,
+                //          static_cast<int>(gps_data->satellite_num));
             }
             break;
         }
@@ -330,6 +339,11 @@ void CompressedLed::set6050CalibratingLed()
 void CompressedLed::set5883CalibratingLed()
 {
     led_strip_set_pixel(led_strip_, 2, 0, 0, 255);
+}
+
+void CompressedLed::setGPSCalibratingLed()
+{
+    led_strip_set_pixel(led_strip_, 3, 255, 255, 0);
 }
 
 void ledTask(void *Params)

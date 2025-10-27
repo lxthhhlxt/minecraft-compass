@@ -19,9 +19,9 @@ struct Coordinate
 
 struct GPSData
 {
+    bool is_valid{false};
     Coordinate coordinate;
     int8_t satellite_num{0};
-    bool is_valid{false};
 };
 
 class DataManager

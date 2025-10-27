@@ -33,6 +33,8 @@ private:
 
     void set5883CalibratingLed();
 
+    void setGPSCalibratingLed();
+
 private:
     led_strip_handle_t led_strip_;
 };
